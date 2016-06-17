@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     if (argc > 1)  // 第一个参数默认为路径
         strcpy_s(path, argv[1]);
 
-    const char *dataFilename = "lineitem5.tbl",
+    const char *dataFilename = "lineitem.tbl",
         *indexFilename = "hashindex.out",
         *inputFilename = "testinput.in",
         *outputFilename = "testoutput.out";
