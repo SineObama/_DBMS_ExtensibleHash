@@ -10,13 +10,13 @@
 
 int main(int argc, char **argv) {
 
-    printf("这里是使用%d个内存页，从%s位拓展的哈希索引。\n", P, 
+    printf("这里是使用%d个内存页，从%s位拓展的哈希索引。\n", P,
 #ifdef MOST
         "高"
 #else
         "低"
 #endif // MOST 
-        );
+    );
 
     // 默认路径为当前路径
     char path[BUFFER_SIZE] = "./";
@@ -39,6 +39,8 @@ int main(int argc, char **argv) {
         indexFile.close();
 
     sprintf_s(fullpath, "%s%s", path, indexFilename);
+    RandomAccessMemory::openfile(fullpath);
+    RandomAccessMemory *RAM = RandomAccessMemory::getInstance();
     ExtensibleHash hash(fullpath);
     char line[BUFFER_SIZE] = {};
 
@@ -68,12 +70,12 @@ int main(int argc, char **argv) {
 
         int end = clock();
         printf("建立索引耗时： %dms\n", end - start);
-        printf("其中IO耗时： %dms\n", hash.dm.getIOtime());
+        printf("其中IO耗时： %dms\n", RAM->getIOtime());
     }
     else {
         printf("索引文件 \"%s\" 已存在。\n", indexFilename);
     }
-    
+
     //hash.check(6100000);
 
     printf("哈希目录页数：%d\n", hash.getListPages());
@@ -119,7 +121,7 @@ int main(int argc, char **argv) {
     std::ofstream outputFile(fullpath);
     size_t count = 0;
     clock_t totaltime = 0, IOtime = 0;
-    clock_t lastIOtime = hash.dm.getIOtime();
+    clock_t lastIOtime = RAM->getIOtime();
     srand(time(NULL));
     while (count <= QUERY_TIMES) {
         count++;
@@ -128,7 +130,7 @@ int main(int argc, char **argv) {
         auto vector = hash.query(key);
         clock_t end = clock();
         totaltime += end - begin;
-        clock_t curIOtime = hash.dm.getIOtime();
+        clock_t curIOtime = RAM->getIOtime();
         IOtime += curIOtime - lastIOtime;
         lastIOtime = curIOtime;
         auto string = vector.get();

@@ -3,7 +3,7 @@
 
 size_t ExtensibleHash::N = 0;
 
-ExtensibleHash::ExtensibleHash(const char *filename) : dm(filename)
+ExtensibleHash::ExtensibleHash(const char *filename)
 {
     // 手动初始化N这个静态“常量”
     if (N == 0) {
@@ -16,28 +16,30 @@ ExtensibleHash::ExtensibleHash(const char *filename) : dm(filename)
         N = max;
     }
 
-    Page *mainPage = dm.getAndLock(0);
+    dm = RandomAccessMemory::getInstance();
+
+    Page *mainPage = dm->getAndLock(0);
     size_t *p = (size_t *)(mainPage->data);
     pages = *p;
     if (pages == 0) {  // 一般代表空文件
         // 写入第0页
         pages = *p = 3;
         gdept = *(p + 1) = 0;  // 好像等于白写
-        dm.writeAndUnlock(mainPage);
+        dm->writeAndUnlock(mainPage);
 
         // 写入第1页的目录
-        Page *gpage = dm.getAndLock(1);
+        Page *gpage = dm->getAndLock(1);
         *(index_t *)(gpage->data) = 2;
         *(size_t *)(gpage->data + index_l) = 0;
-        dm.writeAndUnlock(gpage);
+        dm->writeAndUnlock(gpage);
 
         // 写入空白的第2页
-        Page *lpage = dm.getAndLock(2);
-        dm.writeAndUnlock(lpage);
+        Page *lpage = dm->getAndLock(2);
+        dm->writeAndUnlock(lpage);
     }
     else {
         gdept = *(p + 1);
-        dm.unlock(mainPage);
+        dm->unlock(mainPage);
     }
 }
 
@@ -58,23 +60,23 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
         const size_t gsize = 1 << gdept;
         const index_t index = key % gsize;
         const index_t gpid = index / N + 1;
-        Page *gpage = dm.getAndLock(gpid);
+        Page *gpage = dm->getAndLock(gpid);
         const char *item = gpage->data + index % N * item_l;
         index_t lpid = *(index_t *)item;
         const index_t ldept = *(size_t *)(item + index_l);
         debug_memcpy(watch, gpage->data, L);
-        dm.unlock(gpage);
+        dm->unlock(gpage);
 
         // 插入
         assert(lpid >= ((gsize / N) | 1));
-        Page *lpage = dm.getAndLock(lpid);
+        Page *lpage = dm->getAndLock(lpid);
         VLRPUtil pm(lpage->data);
         if (pm.insert(record, key_l + recordLen) == 0) {  // 插入成功
             debug_memcpy(watch, lpage->data, L);
-            dm.writeAndUnlock(lpage);
+            dm->writeAndUnlock(lpage);
             break;
         }
-        dm.unlock(lpage);
+        dm->unlock(lpage);
 
         // 插入失败（桶满了）
 #ifdef MOST
@@ -90,13 +92,13 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
                 // 转移数据页
                 size_t off = pages - begin;
                 for (index_t i = begin; i < end; i++) {
-                    Page *p = dm.getAndLock(i);
-                    dm.writeAndUnlock(p, i + off);
+                    Page *p = dm->getAndLock(i);
+                    dm->writeAndUnlock(p, i + off);
                 }
 
                 // 修改目录并加倍（复制）
                 for (index_t i = 1; i < begin; i++) {
-                    Page *p = dm.getAndLock(i);
+                    Page *p = dm->getAndLock(i);
                     debug_memcpy(watch, p->data, L);
                     char *cur = p->data;
                     for (index_t j = 0; j < N; j++, cur += item_l) {
@@ -104,27 +106,27 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
                         if (*index >= begin && *index < end)
                             *index += off;
                     }
-                    dm.writeAndUnlock(p);
-                    dm.writeAndUnlock(p, i + copy_pages);
+                    dm->writeAndUnlock(p);
+                    dm->writeAndUnlock(p, i + copy_pages);
                 }
                 if (lpid >= begin && lpid < end)
                     lpid += off;
 
                 // 修改第0页数据：增加总页数
-                Page *mpage = dm.getAndLock(0);
+                Page *mpage = dm->getAndLock(0);
                 *(size_t *)(mpage->data) = (pages += copy_pages);
-                dm.writeAndUnlock(mpage);
+                dm->writeAndUnlock(mpage);
             }
             else {  // 在第1页内加倍目录
-                Page *p = dm.getAndLock(1);
+                Page *p = dm->getAndLock(1);
                 memcpy(p->data + gsize * item_l, p->data, gsize * item_l);
-                dm.writeAndUnlock(p);
+                dm->writeAndUnlock(p);
             }
 
             // 修改第0页数据：全局深度+1
-            Page *mpage = dm.getAndLock(0);
+            Page *mpage = dm->getAndLock(0);
             *(size_t *)(mpage->data + size_l) = (++gdept);
-            dm.writeAndUnlock(mpage);
+            dm->writeAndUnlock(mpage);
         }
 
         // 分裂当前页：
@@ -137,19 +139,19 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
         for (size_t i = 0; i < num; i++) {
             index_t _index = (i << ldept) | lowBit;
             index_t gpid = _index / N + 1;
-            Page *gpage = dm.getAndLock(gpid);
+            Page *gpage = dm->getAndLock(gpid);
             char *item = gpage->data + _index % N * item_l;
             if (i % 2)
                 *(index_t *)(item) = newpid;
             (*(size_t *)(item + index_l))++;
             debug_memcpy(watch, gpage->data, L);
-            dm.writeAndUnlock(gpage);
+            dm->writeAndUnlock(gpage);
         }
 
         // 获取空的缓存页，存放分裂后的2页
-        Page *srcpage = dm.getAndLock(lpid);
-        Page *newpage1 = dm.getAndLock();
-        Page *newpage2 = dm.getAndLock();
+        Page *srcpage = dm->getAndLock(lpid);
+        Page *newpage1 = dm->getAndLock();
+        Page *newpage2 = dm->getAndLock();
 
         debug_memcpy(watch, srcpage->data, L);
         VLRPUtil src(srcpage->data), new1(newpage1->data), new2(newpage2->data);
@@ -169,14 +171,14 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
         }
         debug_memcpy(watch, newpage1->data, L);
         debug_memcpy(watch, newpage2->data, L);
-        dm.unlock(srcpage);
-        dm.writeAndUnlock(newpage1, lpid);
-        dm.writeAndUnlock(newpage2, newpid);
+        dm->unlock(srcpage);
+        dm->writeAndUnlock(newpage1, lpid);
+        dm->writeAndUnlock(newpage2, newpid);
 
         // 修改第0页数据：总页数+1
-        Page *mpage = dm.getAndLock(0);
+        Page *mpage = dm->getAndLock(0);
         *(size_t *)(mpage) = (++pages);
-        dm.writeAndUnlock(mpage);
+        dm->writeAndUnlock(mpage);
 #endif // MOST
     }
 
@@ -197,14 +199,14 @@ Vector<myString> ExtensibleHash::query(key_t key) {
     const size_t gsize = 1 << gdept;
     const index_t index = key % gsize;
     const index_t gpid = index / N + 1;
-    Page *gpage = dm.getAndLock(gpid);
+    Page *gpage = dm->getAndLock(gpid);
     const char *item = gpage->data + index % N * item_l;
     index_t lpid = *(index_t *)item;
-    dm.unlock(gpage);
+    dm->unlock(gpage);
 
     Vector<myString> v;
     assert(lpid >= ((gsize / N) | 1));
-    Page *lpage = dm.getAndLock(lpid);
+    Page *lpage = dm->getAndLock(lpid);
     VLRPUtil pm(lpage->data);
     char record[BUFFER_SIZE];
     for (size_t i = 0;; i++) {
@@ -215,31 +217,31 @@ Vector<myString> ExtensibleHash::query(key_t key) {
             continue;
         v.insert(record + 4);
     }
-    dm.unlock(lpage);
+    dm->unlock(lpage);
     size_t size = v.size();
     auto ary = v.get();
     if (size)
-    for (size_t i = 0; i < size - 1; i++) {
-        for (size_t j = i + 1; j < size; j++) {
-            key_t key1, key2;
-            sscanf_s(ary[i].c_str(), "%*d|%d", &key1);
-            sscanf_s(ary[j].c_str(), "%*d|%d", &key2);
-            if (key1 > key2) {
-                myString tem = ary[i];
-                ary[i] = ary[j];
-                ary[j] = tem;
+        for (size_t i = 0; i < size - 1; i++) {
+            for (size_t j = i + 1; j < size; j++) {
+                key_t key1, key2;
+                sscanf_s(ary[i].c_str(), "%*d|%d", &key1);
+                sscanf_s(ary[j].c_str(), "%*d|%d", &key2);
+                if (key1 > key2) {
+                    myString tem = ary[i];
+                    ary[i] = ary[j];
+                    ary[j] = tem;
+                }
             }
         }
-    }
     return v;
 }
 
 const char *ExtensibleHash::check(int maxKey) {
     // 检查第0页
-    Page *mpage = dm.getAndLock(0);
+    Page *mpage = dm->getAndLock(0);
     size_t *mp = (size_t *)(mpage->data);
     size_t _pages = *mp, _gdept = *(mp + 1);
-    dm.unlock(mpage);
+    dm->unlock(mpage);
     if (pages != _pages)
         throw std::exception("总页数同步错误");
     else if (gdept != _gdept)
@@ -256,7 +258,7 @@ const char *ExtensibleHash::check(int maxKey) {
         inner = gsize;
     }
     for (index_t i = 1; i < gpages + 1; i++) {
-        Page *gpage = dm.getAndLock(i);
+        Page *gpage = dm->getAndLock(i);
         char *cur = gpage->data;
         for (index_t j = 0; j < N; j++, cur += item_l) {
 
@@ -274,7 +276,7 @@ const char *ExtensibleHash::check(int maxKey) {
                 sprintf_s(msg, "局部深度错误：第%d页  第%d个", i, j);
                 throw std::exception(msg);
             }
-            Page *lpage = dm.getAndLock(lpid);
+            Page *lpage = dm->getAndLock(lpid);
             VLRPUtil pm(lpage->data);
             // todo 可能更深一步检查
             static char msg[100] = {};
@@ -289,9 +291,9 @@ const char *ExtensibleHash::check(int maxKey) {
                     throw std::exception(msg);
                 }
             }
-            dm.unlock(lpage);
+            dm->unlock(lpage);
         }
-        dm.unlock(gpage);
+        dm->unlock(gpage);
     }
     return NULL;
 }
@@ -299,7 +301,7 @@ const char *ExtensibleHash::check(int maxKey) {
 // 从目录获取桶的位置
 //index_t *ExtensibleHash::index2pid(index_t index) {
 //    index_t pid = index / N + 1;
-//    char *page = dm.readAndLock(pid);
+//    char *page = dm->readAndLock(pid);
 //    pid = *((index_t *)(page)+index % N);
 //    return &pid;
 //}

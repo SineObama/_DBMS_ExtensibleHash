@@ -1,8 +1,16 @@
 #include "stdafx.h"
 #include "RandomAccessMemory.h"
 
-RandomAccessMemory::RandomAccessMemory(const char *filename)
-{
+bool RandomAccessMemory::opened = false;
+std::fstream RandomAccessMemory::fs;
+Page *RandomAccessMemory::cache = NULL;
+size_t RandomAccessMemory::I = 0, RandomAccessMemory::O = 0, RandomAccessMemory::replaceCount = 0;
+clock_t RandomAccessMemory::Itime = 0, RandomAccessMemory::Otime = 0;
+
+void RandomAccessMemory::openfile(const char *filename) {
+    if (opened)
+        return;
+    opened = true;
     // 当文件不存在时创建一个空的
     std::ifstream ifs(filename);
     if (!ifs.is_open()) {
@@ -13,9 +21,16 @@ RandomAccessMemory::RandomAccessMemory(const char *filename)
     // bug修复：windows下不用二进制打开会把\n改成\r\n。但这里出现的好像是把0x0005替换成0x0e05。二进制打开就没问题了。
     fs.open(filename, std::ios::binary | std::ios::in | std::ios::out);
     cache = new Page[P];
-    I = O = replaceCount = 0;
-    Itime = Otime = 0;
 }
+
+RandomAccessMemory *RandomAccessMemory::getInstance() {
+    if (!opened)
+        return NULL;
+    static RandomAccessMemory instance;
+    return &instance;
+}
+
+RandomAccessMemory::RandomAccessMemory() {}
 
 RandomAccessMemory::~RandomAccessMemory()
 {

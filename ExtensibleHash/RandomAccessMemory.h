@@ -11,8 +11,9 @@ class RandomAccessMemory
 
 public:
 
-    RandomAccessMemory(const char *);
-    ~RandomAccessMemory();
+    // 必须先设置了数据文件才可以获取单例
+    static void openfile(const char *);
+    static RandomAccessMemory *getInstance();
 
     Page *getAndLock();
     Page *getAndLock(index_t pid);
@@ -28,13 +29,16 @@ public:
 
 private:
 
+    static bool opened;
+
     RandomAccessMemory();
+    ~RandomAccessMemory();
 
-    std::fstream fs;
+    static std::fstream fs;
 
-    Page *cache;
+    static Page *cache;
 
-    size_t I, O, replaceCount;
-    clock_t Itime, Otime;
+    static size_t I, O, replaceCount;
+    static clock_t Itime, Otime;
 
 };

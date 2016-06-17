@@ -35,7 +35,7 @@ public:
 
     const char *check(int maxKey);
 
-    RandomAccessMemory dm;
+    RandomAccessMemory *dm;
 
 private:
 

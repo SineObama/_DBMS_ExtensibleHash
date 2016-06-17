@@ -34,7 +34,7 @@ Vector<T>::Vector(const Vector<T> &o) {
     _size = o._size;
     _capacity = o._capacity;
     array = new T[_capacity];
-    for (int i = 0; i < _size; i++) {
+    for (size_t i = 0; i < _size; i++) {
         array[i] = o.array[i];
     }
 }
