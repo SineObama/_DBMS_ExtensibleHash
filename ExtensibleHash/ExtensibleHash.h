@@ -29,6 +29,8 @@ public:
     ~ExtensibleHash();
 
     int insert(std::pair<key_t, char *>);
+    size_t getListPages();
+    size_t getBuckets();
     Vector<myString> query(key_t);
 
     const char *check(int maxKey);

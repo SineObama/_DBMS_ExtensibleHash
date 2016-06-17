@@ -42,7 +42,7 @@
     <ClInclude Include="myString.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Cache.h">
+    <ClInclude Include="Page.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

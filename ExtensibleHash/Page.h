@@ -2,7 +2,7 @@
 
 #include "DataManager.h"
 
-class Cache {
+class Page {
     friend class DataManager;
 public:
     char data[L];
@@ -11,5 +11,5 @@ private:
     bool bit;  // 时钟页面算法的检测位
     index_t pid;  // 对应磁盘上的页id
     size_t pin;  // 被使用的次数
-    Cache() { valid = bit = false; pin = 0; }
+    Page() { valid = bit = false; pin = 0; }
 };

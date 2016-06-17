@@ -16,7 +16,7 @@ public:
 
 private:
 
-    int _size, _capacity;
+    size_t _size, _capacity;
     T *array;
 
 };
@@ -50,8 +50,10 @@ int Vector<T>::insert(T element) {
     if (_size >= _capacity) {
         _capacity *= 2;
         T *tem = new T[_capacity];
-        memcpy(tem, array, _size * sizeof(T));
-        deletep[] array;
+        for (size_t i = 0; i < _size; i++) {
+            tem[i] = array[i];
+        }
+        delete[] array;
         array = tem;
     }
     array[_size++] = element;

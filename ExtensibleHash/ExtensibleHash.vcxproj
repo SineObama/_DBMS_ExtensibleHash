@@ -145,7 +145,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cache.h" />
+    <ClInclude Include="Page.h" />
     <ClInclude Include="DataManager.h" />
     <ClInclude Include="ExtensibleHash.h" />
     <ClInclude Include="myString.h" />

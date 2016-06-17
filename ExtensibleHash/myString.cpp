@@ -43,7 +43,6 @@ myString myString::operator=(const myString &o) {
     if (&o == this)
         return *this;
     _size = o._size;
-    if (_s)
         delete[] _s;
     _s = new char[_size + 1];
     memcpy(_s, o._s, _size + 1);
