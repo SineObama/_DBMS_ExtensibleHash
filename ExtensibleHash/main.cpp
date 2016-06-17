@@ -12,7 +12,7 @@ int main() {
             ExtensibleHash test("test.txt");
         }
         else {
-			printf("%d\n",( 1 << 31) >> 1);
+            printf("%d\n", (1 << 31) >> 1);
             //std::stringstream ss;
             //ss << "123\n12345\n";
             //char s[2];
@@ -44,7 +44,7 @@ int main() {
 
     int start = clock();
 
-    std::ifstream tbl("supplier3.tbl");
+    std::ifstream tbl("lineitem.tbl");
     if (!tbl.is_open()) {
         printf("open .tbl fail\n");
         system("pause");
@@ -57,7 +57,7 @@ int main() {
     hashFile.close();
 
     ExtensibleHash hash(path);
-    char line[1000] = {};
+    char line[BUFFER_SIZE] = {};
     while (!tbl.eof()) {
         tbl.getline(line, sizeof(line));
         std::stringstream ss(line);
@@ -69,6 +69,8 @@ int main() {
         hash.insert(std::make_pair(orderKey, line));
     }
     tbl.close();
+
+    //hash.check(10000);
 
     int end = clock();
     printf("set up: %dms\n", end - start);
