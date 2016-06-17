@@ -1,18 +1,18 @@
 #pragma once
 
-#include "PageManager.h"
+#include "VLRPUtil.h"
 #include "Page.h"
 
 #define P 128
 
 // 按页访问单个数据文件的接口，缓存已封装在内（采用同时更新磁盘文件的方式）
-class DataManager
+class RandomAccessMemory
 {
 
 public:
 
-    DataManager(const char *);
-    ~DataManager();
+    RandomAccessMemory(const char *);
+    ~RandomAccessMemory();
 
     Page *getAndLock();
     Page *getAndLock(index_t pid);
@@ -28,7 +28,7 @@ public:
 
 private:
 
-    DataManager();
+    RandomAccessMemory();
 
     std::fstream fs;
 

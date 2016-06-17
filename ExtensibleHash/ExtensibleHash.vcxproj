@@ -146,21 +146,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Page.h" />
-    <ClInclude Include="DataManager.h" />
+    <ClInclude Include="RandomAccessMemory.h" />
     <ClInclude Include="ExtensibleHash.h" />
     <ClInclude Include="myString.h" />
-    <ClInclude Include="PageManager.h" />
+    <ClInclude Include="VLRPUtil.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Vector.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DataManager.cpp" />
+    <ClCompile Include="RandomAccessMemory.cpp" />
     <ClCompile Include="ExtensibleHash.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="myString.cpp" />
-    <ClCompile Include="PageManager.cpp" />
+    <ClCompile Include="VLRPUtil.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

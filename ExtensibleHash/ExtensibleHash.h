@@ -2,7 +2,7 @@
 
 #include "Vector.h"
 #include "myString.h"
-#include "DataManager.h"
+#include "RandomAccessMemory.h"
 
 //#define NDEBUG
 
@@ -35,7 +35,7 @@ public:
 
     const char *check(int maxKey);
 
-    DataManager dm;
+    RandomAccessMemory dm;
 
 private:
 

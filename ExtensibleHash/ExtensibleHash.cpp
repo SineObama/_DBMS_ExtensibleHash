@@ -216,6 +216,21 @@ Vector<myString> ExtensibleHash::query(key_t key) {
         v.insert(record + 4);
     }
     dm.unlock(lpage);
+    size_t size = v.size();
+    auto ary = v.get();
+    if (size)
+    for (size_t i = 0; i < size - 1; i++) {
+        for (size_t j = i + 1; j < size; j++) {
+            key_t key1, key2;
+            sscanf_s(ary[i].c_str(), "%*d|%d", &key1);
+            sscanf_s(ary[j].c_str(), "%*d|%d", &key2);
+            if (key1 > key2) {
+                myString tem = ary[i];
+                ary[i] = ary[j];
+                ary[j] = tem;
+            }
+        }
+    }
     return v;
 }
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "DataManager.h"
+#include "VLRPUtil.h"
 
 class Page {
-    friend class DataManager;
+    friend class RandomAccessMemory;
 public:
     char data[L];
 private:

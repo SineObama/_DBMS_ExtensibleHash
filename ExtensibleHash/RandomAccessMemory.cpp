@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "DataManager.h"
+#include "RandomAccessMemory.h"
 
-DataManager::DataManager(const char *filename)
+RandomAccessMemory::RandomAccessMemory(const char *filename)
 {
     // 当文件不存在时创建一个空的
     std::ifstream ifs(filename);
@@ -17,13 +17,13 @@ DataManager::DataManager(const char *filename)
     Itime = Otime = 0;
 }
 
-DataManager::~DataManager()
+RandomAccessMemory::~RandomAccessMemory()
 {
     delete[] cache;
     fs.close();
 }
 
-Page *DataManager::getAndLock() {
+Page *RandomAccessMemory::getAndLock() {
     Page *c = replace();
     if (c == NULL)
         return NULL;
@@ -31,7 +31,7 @@ Page *DataManager::getAndLock() {
     return lock(c);
 }
 
-Page *DataManager::getAndLock(index_t pid) {
+Page *RandomAccessMemory::getAndLock(index_t pid) {
     // 尝试查找内存已缓存的页
     int i;
     for (i = 0; i < P; i++) {
@@ -61,7 +61,7 @@ Page *DataManager::getAndLock(index_t pid) {
 
 }
 
-Page *DataManager::writeAndUnlock(Page *c, index_t pid) {
+Page *RandomAccessMemory::writeAndUnlock(Page *c, index_t pid) {
     if (c->pid != pid) {
         // 若找到即将写入的页id的对应内存，设为无效
         for (size_t i = 0; i < P; i++) {
@@ -77,7 +77,7 @@ Page *DataManager::writeAndUnlock(Page *c, index_t pid) {
 }
 
 // 写入磁盘
-Page *DataManager::writeAndUnlock(Page *c) {
+Page *RandomAccessMemory::writeAndUnlock(Page *c) {
     size_t pos = c->pid * L;
     if (pos > 0x7fffffff) {
         throw std::exception("输出位置超过2G");
@@ -92,7 +92,7 @@ Page *DataManager::writeAndUnlock(Page *c) {
     return unlock(c);
 }
 
-Page *DataManager::lock(Page *c) {
+Page *RandomAccessMemory::lock(Page *c) {
     if (c->pin > 0)
         return NULL;
     else {
@@ -101,13 +101,13 @@ Page *DataManager::lock(Page *c) {
     }
 }
 
-Page *DataManager::unlock(Page *c) {
+Page *RandomAccessMemory::unlock(Page *c) {
     if (c->pin > 0)
         c->pin--;
     return c;
 }
 
-Page *DataManager::replace() {
+Page *RandomAccessMemory::replace() {
     replaceCount++;
     static size_t cur = 0;
     size_t last = cur;
@@ -136,14 +136,14 @@ Page *DataManager::replace() {
     return rtn;
 }
 
-size_t DataManager::getIOs() {
+size_t RandomAccessMemory::getIOs() {
     return I + O;
 }
 
-clock_t DataManager::getIOtime() {
+clock_t RandomAccessMemory::getIOtime() {
     return Itime + Otime;
 }
 
-size_t DataManager::getReplacements() {
+size_t RandomAccessMemory::getReplacements() {
     return replaceCount;
 }
