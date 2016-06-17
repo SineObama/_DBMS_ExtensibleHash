@@ -4,7 +4,7 @@
 
 typedef unsigned int index_t;
 
-// 提供变长记录页的操作
+// 提供变长记录页的辅助类
 class VLRPUtil
 {
 

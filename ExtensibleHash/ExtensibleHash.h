@@ -4,8 +4,16 @@
 #include "myString.h"
 #include "DataManager.h"
 
+//#define NDEBUG
+
 //#define MOST
 #define BUFFER_SIZE 1000  // 保存单条记录
+
+#ifndef NDEBUG
+#define debug_memcpy(dst, src, size) memcpy(dst, src, size)
+#else
+#define debug_memcpy(dst, src, size)
+#endif // !NDEBUG
 
 typedef int key_t;
 
@@ -25,13 +33,11 @@ public:
 
     const char *check(int maxKey);
 
+    DataManager dm;
+
 private:
 
     //index_t *index2pid(index_t);
-
-    //const char *checkItem(const char *item, size_t gpages);
-
-    DataManager dm;
 
     size_t pages, gdept;
 
@@ -40,4 +46,5 @@ private:
     static const size_t size_l = sizeof(size_t);
     static const size_t item_l = index_l + size_l;
     static size_t N;  // 每一页能存放的目录项数。取2的整数次方
+
 };

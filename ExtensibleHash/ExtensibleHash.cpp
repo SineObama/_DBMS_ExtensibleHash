@@ -58,39 +58,31 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
         const size_t gsize = 1 << gdept;
         const index_t index = key % gsize;
         const index_t gpid = index / N + 1;
-
         Cache *gpage = dm.getBlockAndLock(gpid);
-        char *item = gpage->data + index % N * item_l;
+        const char *item = gpage->data + index % N * item_l;
         index_t lpid = *(index_t *)item;
-        const size_t ldept = *(size_t *)(item + index_l);
-
-        memcpy(watch, gpage->data, L);
-
-
+        const index_t ldept = *(size_t *)(item + index_l);
+        debug_memcpy(watch, gpage->data, L);
         dm.unlock(gpage);
-        {
-            if (lpid < ((gsize / N) | 1)) {
-                return -1;
-            }
-            Cache *lpage = dm.getBlockAndLock(lpid);
-            VLRPUtil pm(lpage->data);
-            if (pm.insert(record, key_l + recordLen) == 0) {
 
-                //memcpy(watch, lpage->data, L);
-
-                dm.writeBlockAndUnlock(lpage);
-                break;
-            }
-            else {
-                dm.unlock(lpage);
-            }
+        // 插入
+        assert(lpid >= ((gsize / N) | 1));
+        Cache *lpage = dm.getBlockAndLock(lpid);
+        VLRPUtil pm(lpage->data);
+        if (pm.insert(record, key_l + recordLen) == 0) {  // 插入成功
+            debug_memcpy(watch, lpage->data, L);
+            dm.writeBlockAndUnlock(lpage);
+            break;
         }
+        dm.unlock(lpage);
+
         // 插入失败（桶满了）
 #ifdef MOST
         // todo
         exit(1);
 #else
-        if (ldept == gdept) {  // 需要目录加倍
+        // 检查是否需要目录加倍
+        if (ldept == gdept) {
             if (gsize >= N) {  // 须转移部分数据页，腾出位置放目录
                 size_t copy_pages = gsize / N;  // 转移的页数
                 index_t begin = copy_pages + 1, end = begin + copy_pages;  // 转移的范围
@@ -105,22 +97,17 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
                 // 修改目录并加倍（复制）
                 for (index_t i = 1; i < begin; i++) {
                     Cache *p = dm.getBlockAndLock(i);
-
-                    memcpy(watch, p->data, L);
-
+                    debug_memcpy(watch, p->data, L);
                     char *cur = p->data;
                     for (index_t j = 0; j < N; j++, cur += item_l) {
                         index_t *index = (index_t *)cur;
-                        if (*index > MAXPID) {
-                            return -1;
-                        }
+                        assert(*index <= MAXPID);
                         if (*index >= begin && *index < end)
                             *index += off;
                     }
                     dm.writeBlockAndUnlock(p);
                     dm.writeBlockAndUnlock(p, i + copy_pages);
                 }
-                // bug修复：lpid可能已无效
                 if (lpid >= begin && lpid < end)
                     lpid += off;
 
@@ -129,7 +116,7 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
                 *(size_t *)(mpage->data) = (pages += copy_pages);
                 dm.writeBlockAndUnlock(mpage);
             }
-            else {  // 在第1页内部目录加倍（复制）
+            else {  // 在第1页内加倍目录
                 Cache *p = dm.getBlockAndLock(1);
                 memcpy(p->data + gsize * item_l, p->data, gsize * item_l);
                 dm.writeBlockAndUnlock(p);
@@ -142,6 +129,7 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
         }
 
         // 分裂当前页：
+        // todo 未处理同一键值的记录过多过长，一页存不下的问题。将会导致目录无限翻倍
 
         index_t newpid = pages;
 
@@ -155,55 +143,34 @@ int ExtensibleHash::insert(std::pair<key_t, char *> pair) {
             if (i % 2)
                 *(index_t *)(item) = newpid;
             (*(size_t *)(item + index_l))++;
-
-            memcpy(watch, gpage->data, L);
-
+            debug_memcpy(watch, gpage->data, L);
             dm.writeBlockAndUnlock(gpage);
         }
-        // bug修复：原本的方法存在逻辑错误：
-        //// 增加较小目录项的本地深度
-        //index_t index1 = index & ~(1 << ldept);
-        //index_t gpid1 = index1 / N + 1;
-        //Cache *gpage1 = dm.getBlockAndLock(gpid1);
-        //char *item1 = gpage1->data + index1 % N * item_l;
-        //(*(size_t *)(item1 + index_l))++;
-        //dm.writeBlockAndUnlock(gpage1);
-        //// 增加较大目录项的本地深度，并改变页id
-        //index_t index2 = index | (1 << ldept);
-        //index_t gpid2 = index2 / N + 1;
-        //Cache *gpage2 = dm.getBlockAndLock(gpid2);
-        //char *item2 = gpage2->data + index2 % N * item_l;
-        //*(index_t *)(item2) = newpid;
-        //(*(size_t *)(item2 + index_l))++;
-        //dm.writeBlockAndUnlock(gpage2);
 
         // 获取空的缓存页，存放分裂后的2页
-        Cache *lpage = dm.getBlockAndLock(lpid);
+        Cache *srcpage = dm.getBlockAndLock(lpid);
         Cache *newpage1 = dm.getBlockAndLock();
         Cache *newpage2 = dm.getBlockAndLock();
 
-        memcpy(watch, lpage->data, L);
-
-        VLRPUtil pm(lpage->data), pm1(newpage1->data), pm2(newpage2->data);
+        debug_memcpy(watch, srcpage->data, L);
+        VLRPUtil src(srcpage->data), new1(newpage1->data), new2(newpage2->data);
         for (int i = 0;; i++) {
             char item[BUFFER_SIZE] = {};
             size_t length = sizeof(item);
-            int state = pm.get(item, &length, i);
+            int state = src.get(item, &length, i);
             if (state == -1)
                 break;
             else if (state == -2)
                 exit(1);
             int key = *(int *)item;
             if (key & (1 << ldept))
-                pm2.insert(item, length);
+                new2.insert(item, length);
             else
-                pm1.insert(item, length);
+                new1.insert(item, length);
         }
-
-        memcpy(watch, newpage1->data, L);
-        memcpy(watch, newpage2->data, L);
-
-        dm.unlock(lpage);
+        debug_memcpy(watch, newpage1->data, L);
+        debug_memcpy(watch, newpage2->data, L);
+        dm.unlock(srcpage);
         dm.writeBlockAndUnlock(newpage1, lpid);
         dm.writeBlockAndUnlock(newpage2, newpid);
 
@@ -278,12 +245,6 @@ const char *ExtensibleHash::check(int maxKey) {
                 }
             }
             dm.unlock(lpage);
-
-            //const char *error = checkItem(cur, gpages, (i * N + j) % gsize);
-            //if (error) {
-            //	sprintf(msg, "%s：第%d页  第%d个", error, i, j);
-            //	return msg;
-            //}
         }
         dm.unlock(gpage);
     }
