@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
         int end = clock();
         printf("建立索引耗时： %dms\n", end - start);
-        printf("其中IO耗时： %dms\n", RAM->getIOtime());
+        printf("其中IO耗时： %dms，IO总数：%d\n", RAM->getIOtime(), RAM->getIOs());
     }
     else {
         printf("索引文件 \"%s\" 已存在。\n", indexFilename);

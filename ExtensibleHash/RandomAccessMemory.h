@@ -3,7 +3,7 @@
 #include "VLRPUtil.h"
 #include "Page.h"
 
-#define P 8
+#define P 128
 
 // 按页访问单个数据文件的接口，缓存已封装在内（采用同时更新磁盘文件的方式）
 class RandomAccessMemory
